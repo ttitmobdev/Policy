@@ -17,6 +17,7 @@ public class AdapterNote extends RecyclerView.Adapter<AdapterNote.ViewHolder> {
     List<TextNote> textNotes;
 
 
+
     public interface NoteItemListener{
         void onNoteClick(long id);
     }

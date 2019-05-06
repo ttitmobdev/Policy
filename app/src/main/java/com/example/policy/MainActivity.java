@@ -3,6 +3,7 @@ package com.example.policy;
 import android.Manifest;
 import android.content.DialogInterface;
 import android.content.Intent;
+import android.content.pm.ActivityInfo;
 import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Bitmap;
@@ -21,9 +22,12 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.helper.ItemTouchHelper;
 import android.util.Log;
+import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
+import android.widget.RelativeLayout;
 import android.widget.Toast;
 
 import com.example.policy.Note.AdapterNote;
@@ -43,11 +47,13 @@ public class MainActivity extends AppCompatActivity {
     String note;
     AdapterNote adapterNote;
     List<TextNote> notes;
+    Adapter imgAdapter;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
         recyclerViewImg = findViewById(R.id.rec);
         notes = new ArrayList<>();
         adapterNote = new AdapterNote(notes);
@@ -57,9 +63,9 @@ public class MainActivity extends AppCompatActivity {
         noteRec.setLayoutManager(linearLayoutManager);
         noteRec.setAdapter(adapterNote);
         checkPermissions();
-        GridLayoutManager gridLayoutManager = new GridLayoutManager(this,4);
+        GridLayoutManager gridLayoutManager = new GridLayoutManager(this, 4);
         recyclerViewImg.setLayoutManager(gridLayoutManager);
-        ItemTouchHelper touchHelper = new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(0,ItemTouchHelper.LEFT){
+        ItemTouchHelper touchHelper = new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(0, ItemTouchHelper.LEFT) {
 
             @Override
             public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder, @NonNull RecyclerView.ViewHolder viewHolder1) {
@@ -75,6 +81,8 @@ public class MainActivity extends AppCompatActivity {
         createFolder();
         reinit();
     }
+
+
     public void checkPermissions(){
 
         if (ContextCompat.checkSelfPermission(this, Manifest.permission.READ_EXTERNAL_STORAGE)!= PackageManager.PERMISSION_GRANTED){
@@ -184,4 +192,5 @@ public class MainActivity extends AppCompatActivity {
                 }).create();
         alertDialog.show();
     }
+
 }
