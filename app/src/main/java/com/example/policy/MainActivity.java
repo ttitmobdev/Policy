@@ -1,6 +1,9 @@
 package com.example.policy;
 
 import android.Manifest;
+import android.arch.lifecycle.Observer;
+import android.arch.lifecycle.ViewModelProviders;
+import android.arch.lifecycle.ViewModelProvider;
 import android.content.DialogInterface;
 import android.content.Intent;
 import android.content.pm.ActivityInfo;
@@ -8,6 +11,8 @@ import android.content.pm.PackageManager;
 import android.database.Cursor;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.media.MediaPlayer;
+import android.media.MediaRecorder;
 import android.net.Uri;
 import android.os.Environment;
 import android.provider.MediaStore;
@@ -22,6 +27,9 @@ import android.support.v7.widget.LinearLayoutManager;
 import android.support.v7.widget.RecyclerView;
 import android.support.v7.widget.helper.ItemTouchHelper;
 import android.util.Log;
+import android.view.Menu;
+import android.view.MenuInflater;
+import android.view.MenuItem;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.Button;
@@ -31,6 +39,7 @@ import android.widget.RelativeLayout;
 import android.widget.Toast;
 
 import com.example.policy.Note.AdapterNote;
+import com.example.policy.Note.NoteViewModel;
 import com.example.policy.Note.TextNote;
 
 import java.io.ByteArrayOutputStream;
@@ -38,6 +47,7 @@ import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.security.spec.ECField;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -49,11 +59,25 @@ public class MainActivity extends AppCompatActivity {
     List<TextNote> notes;
     Adapter imgAdapter;
 
+    private MediaRecorder mediaRecorder;
+    private MediaPlayer mediaPlayer;
+    private String fileName;
+
+    private NoteViewModel noteViewModel;
+
+
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         setRequestedOrientation(ActivityInfo.SCREEN_ORIENTATION_PORTRAIT);
+
+        noteViewModel = ViewModelProviders.of(this).get(NoteViewModel.class);
+
+
+        fileName = Environment.getExternalStorageDirectory()+"/record.3gpp";
+
         recyclerViewImg = findViewById(R.id.rec);
         notes = new ArrayList<>();
         adapterNote = new AdapterNote(notes);
@@ -74,7 +98,20 @@ public class MainActivity extends AppCompatActivity {
 
             @Override
             public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int i) {
-                adapterNote.removeAt(viewHolder.getAdapterPosition());
+               noteViewModel.delete(adapterNote.getNoteAt(viewHolder.getAdapterPosition()));
+                Toast.makeText(MainActivity.this, "Note deleted", Toast.LENGTH_SHORT).show();
+            }
+        });
+        adapterNote.setOnItemClickListener(new AdapterNote.OnItemClickListener() {
+            @Override
+            public void onItemClick(TextNote note) {
+
+            }
+        });
+        noteViewModel.getAllNotes().observe(this, new Observer<List<TextNote>>() {
+            @Override
+            public void onChanged(@Nullable List<TextNote> textNotes) {
+                adapterNote.setTextNotes(textNotes);
             }
         });
         touchHelper.attachToRecyclerView(noteRec);
@@ -95,6 +132,10 @@ public class MainActivity extends AppCompatActivity {
         }
         if (ContextCompat.checkSelfPermission(this,Manifest.permission.CAMERA)!=PackageManager.PERMISSION_GRANTED){
             requestPermissions(new String[] {Manifest.permission.CAMERA},1);
+        }
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED){
+            requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO},1);
+            return;
         }
     }
 
@@ -179,8 +220,7 @@ public class MainActivity extends AppCompatActivity {
                     public void onClick(DialogInterface dialog, int which) {
                         note = input.getText().toString();
                         if (!note.isEmpty()){
-                            TextNote txtNote = new TextNote(note);
-                            notes.add(txtNote);
+                            saveNote(note);
                         }
                     }
                 })
@@ -193,4 +233,93 @@ public class MainActivity extends AppCompatActivity {
         alertDialog.show();
     }
 
+    private void saveNote(String note){
+        TextNote textNote = new TextNote(note);
+        noteViewModel.insert(textNote);
+
+    }
+
+    public void playStop(View view) {
+        if (mediaPlayer != null) {
+            mediaPlayer.stop();
+        }
+    }
+
+    public void playStart(View view) {
+        try{
+            releasePlayer();
+            mediaPlayer = new MediaPlayer();
+            mediaPlayer.setDataSource(fileName);
+            mediaPlayer.prepare();
+            mediaPlayer.start();
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+
+    public void recordStop(View view) {
+        if (mediaRecorder != null){
+            mediaRecorder.stop();
+        }
+    }
+
+    public void recordStart(View view) {
+        try {
+            releaseRecorder();
+            File outFile = new File(fileName);
+            if (outFile.exists()) {
+                outFile.delete();
+            }
+
+            mediaRecorder = new MediaRecorder();
+            mediaRecorder.setAudioSource(MediaRecorder.AudioSource.MIC);
+            mediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.THREE_GPP);
+            mediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.AMR_NB);
+            mediaRecorder.setOutputFile(fileName);
+            mediaRecorder.prepare();
+            mediaRecorder.start();
+        } catch (Exception e){
+            e.printStackTrace();
+        }
+    }
+    public void releasePlayer(){
+        if (mediaPlayer != null){
+            mediaPlayer.release();
+            mediaPlayer = null;
+        }
+    }
+
+    public void releaseRecorder(){
+        if (mediaRecorder != null){
+            mediaRecorder.release();
+            mediaRecorder = null;
+        }
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        releasePlayer();
+        releaseRecorder();
+    }
+
+    @Override
+    public boolean onCreateOptionsMenu(Menu menu) {
+        MenuInflater menuInflater = getMenuInflater();
+        menuInflater.inflate(R.menu.msin_menu,menu);
+        return true;
+    }
+
+    @Override
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()){
+            case R.id.deleteAllNotes:
+                noteViewModel.deleteAllNotes();
+                Toast.makeText(this, "All notes deleted", Toast.LENGTH_SHORT).show();
+                return true;
+                default:
+                    return super.onOptionsItemSelected(item);
+        }
+
+    }
 }

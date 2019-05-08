@@ -11,10 +11,12 @@ import android.widget.TextView;
 
 import com.example.policy.R;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class AdapterNote extends RecyclerView.Adapter<AdapterNote.ViewHolder> {
-    List<TextNote> textNotes;
+    List<TextNote> textNotes = new ArrayList<>();
+    private OnItemClickListener listener;
 
 
 
@@ -51,12 +53,34 @@ public class AdapterNote extends RecyclerView.Adapter<AdapterNote.ViewHolder> {
 
         public ViewHolder(@NonNull View itemView) {
             super(itemView);
+            itemView.setOnClickListener(new View.OnClickListener() {
+                @Override
+                public void onClick(View v) {
+                    int position = getAdapterPosition();
+                    if (listener!=null & position!=RecyclerView.NO_POSITION) {
+                        listener.onItemClick(textNotes.get(position));
+                    }
+                }
+            });
+
             textView = itemView.findViewById(R.id.textView);
 
         }
     }
-     public void removeAt(int position){
-        textNotes.remove(position);
+    public TextNote getNoteAt(int position){
+        return textNotes.get(position);
+    }
+
+    public void setTextNotes(List<TextNote> textNotes) {
+        this.textNotes = textNotes;
         notifyDataSetChanged();
-     }
+    }
+
+    public interface OnItemClickListener{
+        void onItemClick(TextNote note);
+    }
+
+    public void setOnItemClickListener(OnItemClickListener listener) {
+        this.listener = listener;
+    }
 }
